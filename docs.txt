@@ -1,0 +1,87 @@
+# SSR - Server Side Rendering
+  -> A request foi feita antes do component ser mostrado em tela, ou seja, mesmo desabilitando o javascript
+  os dados aparecem em tela pois eles ja foram carregados antes
+
+
+  export function Home({ repositories }) {
+    return (
+      <ul>
+        {repositories.map((repository: string) => (
+          <li key={repository}>{repository}</li>
+        ))}
+      </ul>
+    )
+  }
+
+  export const getServerSideProps: GetServerSideProps = async () => {
+    // get da api
+
+    return {
+      props: {
+        repositories: repositoriesNames,
+      }
+    }
+  }
+
+# SSG - Static Side Generation
+  -> Gerar uma versão estática em cache uma vez, e mostrar para vários usuários essa mesma versão,
+  dessa forma o banco não sofre com milhares de requests simultâneas
+
+  -> Basta trocar o getServerSideProps: GetServerSideProps para => getStaticProps: GetStaticProps
+
+  E além das props no retorno, posso passar um revalidate dessa forma que é quantos segundos eu quero
+  que a página se mantenha em cache:
+
+  return {
+    props: {},
+    revalidate: 5
+  }
+
+  -> Mas para testar tem um problema, ela não funciona no servidor de desenvolvimento, então teria
+  que rodar uma build para testar como se fosse em produção
+
+# Páginas dinâmicas
+  OBS: Toda página que recebe um parâmetro, e ela também é uma página estática, ou seja, tem a função
+  getStaticProps, a gente precisa retornar outra função chamada getStaticPaths
+
+  export const getStaticPaths: GetStaticPaths = async () => {  
+    // pegar posts mais lidos
+
+    return {
+      paths: [],
+      fallback: false,
+    };
+  };
+
+  -> nos paths geralmente retorna quais posts eu quero gerar de uma maneira estática, então eu
+  poderia deixar vazio para gerar só quando alguém acessar, ou posso colocar apenas os posts mais
+  lidos
+
+# No arquivo hello.ts
+    export default async function handler(
+      req: NextApiRequest,
+      res: NextApiResponse<Data>
+    ) {
+      await res.unstable_revalidate("/");
+
+      return res.status(200).json({ name: "John Doe" });
+    }
+
+    -> Essa função res.unstable_revalidate serve para forçar uma revalidação, por exemplo, se uma
+    page estiver com seu revalidate de 4 horas, usando essa função eu posso forçar que ela revalide
+    ao entrar na página
+
+# Middleware - interceptador
+    Situação: Página na aplicação que nunca muda, mas ela só pode acessar se tiver permissão, ou 
+  estiver logada na aplicação
+
+  Criar o arquivo _middleware.tsx:
+    import type { NextFetchEvent, NextRequest } from "next/server";
+
+    export function middleware(req: NextRequest, ev: NextFetchEvent) {
+      return new Response("Hello, world!");
+    }
+
+    -> Ao rodar yarn dev ele vai mostrar apenas o Hello, world! pois o retorno da resposta foi
+    interceptado
+    -> Para mostrar o projeto normalmente, basta comentar a linha do return
